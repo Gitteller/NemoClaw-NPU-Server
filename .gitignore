@@ -17,3 +17,8 @@ nemotron/
 .env
 *.env
 secrets.txt
+
+# TLS certificates - generated locally, never commit private keys
+server.crt
+server.key
+*.pem
