@@ -12,3 +12,8 @@ __pycache__/
 
 # Test artifacts
 nemotron/
+
+# Environment / secrets - NEVER commit these
+.env
+*.env
+secrets.txt

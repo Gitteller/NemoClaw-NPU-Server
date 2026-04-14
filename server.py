@@ -2,6 +2,9 @@
 NemoClaw NPU Inference Server
 OpenAI-compatible REST API backed by Intel NPU via OpenVINO GenAI
 Listens on 0.0.0.0:11435 — accessible from WSL2 at host IP
+
+Security: Set NPU_API_KEY environment variable to require Bearer token auth.
+          Leave unset (or empty) to disable auth (local-only use).
 """
 
 import json
@@ -10,6 +13,7 @@ import uuid
 import threading
 import sys
 import os
+import secrets
 from pathlib import Path
 from flask import Flask, request, jsonify, Response, stream_with_context
 
@@ -30,11 +34,31 @@ PORT = 11435
 DEVICE = "AUTO:NPU,GPU"
 MODEL_NAME = "phi-3.5-mini-npu"   # Reported name in /v1/models
 
+# API key auth — set NPU_API_KEY env var to enable; empty = auth disabled
+API_KEY = os.environ.get("NPU_API_KEY", "").strip()
+if API_KEY:
+    print(f"[security] API key authentication ENABLED")
+else:
+    print(f"[security] API key authentication DISABLED (set NPU_API_KEY to enable)")
+
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 pipe = None
 pipe_lock = threading.Lock()
 active_device = DEVICE
+
+
+def check_auth():
+    """Return 401 response if API key is configured and request lacks valid Bearer token."""
+    if not API_KEY:
+        return None  # auth disabled
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": {"message": "Missing Authorization header", "type": "auth_error"}}), 401
+    token = auth_header[len("Bearer "):]
+    if not secrets.compare_digest(token, API_KEY):
+        return jsonify({"error": {"message": "Invalid API key", "type": "auth_error"}}), 401
+    return None  # auth passed
 
 def load_model():
     global pipe
@@ -93,6 +117,9 @@ def make_chunk(content, model, finish_reason=None):
 # ---------------------------------------------------------------------------
 @app.route("/v1/models", methods=["GET"])
 def list_models():
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
     return jsonify({
         "object": "list",
         "data": [{
@@ -105,6 +132,9 @@ def list_models():
 
 @app.route("/v1/chat/completions", methods=["POST"])
 def chat_completions():
+    auth_err = check_auth()
+    if auth_err:
+        return auth_err
     data = request.get_json(force=True)
     messages = data.get("messages", [])
     stream = data.get("stream", False)
