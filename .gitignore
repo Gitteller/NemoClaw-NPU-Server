@@ -1,0 +1,14 @@
+# Model weights - too large for git (use download_model.py)
+model/
+model-new/
+
+# Runtime logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test artifacts
+nemotron/
