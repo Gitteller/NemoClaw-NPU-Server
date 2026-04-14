@@ -1,0 +1,24 @@
+# Model weights - too large for git (use download_model.py)
+model/
+model-new/
+
+# Runtime logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test artifacts
+nemotron/
+
+# Environment / secrets - NEVER commit these
+.env
+*.env
+secrets.txt
+
+# TLS certificates - generated locally, never commit private keys
+server.crt
+server.key
+*.pem
